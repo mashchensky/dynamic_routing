@@ -1,0 +1,86 @@
+---
+    - name: routers | Prepare hosts to be soft routers
+      hosts: all
+      become: true
+      vars_files:
+        - "files/{{ ansible_hostname }}.yml"
+        
+      tasks:
+        - name: Enable forwarding and soft filter
+          copy:
+            src: files/router.conf
+            dest: /etc/sysctl.d/router.conf
+            owner: root
+            group: root
+            mode: '0644'
+
+        - name: Configure loopback interface
+          template:
+            src: files/ifcfg-lo.j2
+            dest: /etc/sysconfig/network-scripts/ifcfg-lo:2
+          notify:
+            - restart network
+            - restart network
+        
+        - name: Install packages from standart repo
+          yum:
+            name: "{{ packages }}"
+            state: present
+          vars:
+            packages:
+              - quagga
+              - policycoreutils-python
+              - wireshark
+
+        - name: Enable selinux permissions
+          seboolean:
+            name: zebra_write_config
+            persistent: yes
+            state: yes
+
+        - name: Copy ospfd configuration file
+          template:
+            src: files/ospfd.conf.j2
+            dest: /etc/quagga/ospfd.conf
+            owner: quagga
+            group: quaggavt
+            mode: '0600'
+
+        - name: Enable and start zebra, ospfd and firewalld
+          systemd:
+            name: "{{ item }}"
+            enabled: yes
+            state: started
+          with_items:
+                - 'zebra'
+                - 'ospfd'
+                - 'firewalld'
+
+        - name: Allow ospf protocol in firewalld
+          raw: "firewall-cmd --add-protocol=ospf --permanent && firewall-cmd --reload"
+        
+      handlers:
+        - name: restart network
+          systemd:
+            name: network
+            state: restarted
+
+
+
+    - name: r2, r3 | provision of r2 and r3
+      hosts: r2, r3
+      become: true
+
+      tasks:
+        - name: disable default route on eth0
+          lineinfile:
+            path: /etc/sysconfig/network-scripts/ifcfg-eth0
+            line: 'DEFROUTE=no'
+          notify:
+            - restart network
+
+      handlers:
+        - name: restart network
+          systemd:
+            name: network
+            state: restarted

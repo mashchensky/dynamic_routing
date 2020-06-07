@@ -1,0 +1,23 @@
+!
+!
+interface eth0
+!
+interface eth1
+{{ eth1_cost }}
+!
+interface eth2
+!
+interface lo
+!
+router ospf
+ ospf router-id {{ lo_ip }}
+ passive-interface default
+ no passive-interface eth1
+ no passive-interface eth2
+ network {{ lo_ip }}/32 area 0.0.0.0
+ network {{ net_1 }} area 0.0.0.0
+ network {{ net_2 }} area 0.0.0.0
+ {{ def_i }}
+!
+line vty
+!

@@ -1,0 +1,6 @@
+---
+    lo_ip: 10.0.0.1
+    net_1: 172.16.1.0/24
+    net_2: 172.16.2.0/24
+    def_i: 'default-information originate'
+    eth1_cost: '!'
